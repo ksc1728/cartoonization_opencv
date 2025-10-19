@@ -45,7 +45,7 @@ except ImportError as e:
     except:
         print("Could not import CycleGAN models - these style options will not be available")
 
-# Create Flask app with custom template folder - pointing to the project root
+
 app = Flask(__name__, template_folder=os.path.join(project_root, 'templates'))
 app.config['UPLOAD_FOLDER'] = os.path.join('static', 'uploads')
 app.config['OUTPUT_FOLDER'] = os.path.join('static', 'outputs')
@@ -177,13 +177,13 @@ class ImageStylizer:
                 
                 state_dict = torch.load(model_path, map_location='cpu')
                 
-                # Handle different state dict formats and filter out unexpected keys
+                # Handling different state dict formats and filter out unexpected keys
                 if hasattr(model, 'netG_A'):
                     # Get the model's state dict to extract required keys
                     model_state_dict = model.netG_A.state_dict()
                     required_keys = set(model_state_dict.keys())
                     
-                    # Process the loaded state dict to match required format
+                    # Processing the loaded state dict to match required format
                     if isinstance(state_dict, dict):
                         # Handle full model state dict
                         if 'model.netG' in state_dict:
@@ -191,7 +191,7 @@ class ImageStylizer:
                         elif 'netG' in state_dict:
                             filtered_state_dict = {k: v for k, v in state_dict['netG'].items() if k in required_keys}
                         else:
-                            # Handle direct state dict - filter out batch norm stats
+                            #state dict - filter out batch norm stats
                             filtered_state_dict = {}
                             for k, v in state_dict.items():
                                 # Check if key is in required keys
@@ -204,20 +204,20 @@ class ImageStylizer:
                                     if clean_key in required_keys:
                                         filtered_state_dict[clean_key] = v
                     else:
-                        # Handle direct state dict - filter out batch norm stats
+                        # state dict - filter out batch norm stats
                         filtered_state_dict = {k: v for k, v in state_dict.items() if k in required_keys}
                     
-                    # Load filtered state dict
+                    #filtered state dict
                     missing_keys = set(required_keys) - set(filtered_state_dict.keys())
                     if missing_keys:
                         print(f"Warning: Missing keys in state dict for {style}: {missing_keys}")
                     
                     try:
-                        # Try strict loading first
+                        # strict loading first
                         model.netG_A.load_state_dict(filtered_state_dict, strict=True)
                     except Exception as e:
                         print(f"Strict loading failed: {e}")
-                        # Try non-strict loading as fallback
+                        # non-strict loading as fallback
                         model.netG_A.load_state_dict(filtered_state_dict, strict=False)
                         print(f"Loaded with non-strict mode for {style}")
                     
@@ -237,7 +237,7 @@ class ImageStylizer:
         shutil.rmtree(temp_dir)
 
     def apply_neural_style(self, content_path, style_path):
-        # """Apply neural style transfer"""
+       
         # if not self.hub_module:
         #     raise ValueError("Neural style transfer module is not available")
             
@@ -281,7 +281,7 @@ class ImageStylizer:
         model = self.cartoongan_models[style]
         img = Image.open(image_path).convert("RGB")
         
-        # Resize maintaining aspect ratio
+        # Resizing
         w, h = img.size
         ratio = w / h
         load_size = 450
@@ -294,9 +294,9 @@ class ImageStylizer:
             w = int(h * ratio)
             
         img = img.resize((w, h), Image.BICUBIC)
-        img = np.asarray(img)[:, :, [2, 1, 0]]  # RGB to BGR
+        img = np.asarray(img)[:, :, [2, 1, 0]] 
         img = transforms.ToTensor()(img).unsqueeze(0)
-        img = -1 + 2 * img  # Scale to [-1, 1]
+        img = -1 + 2 * img  
         
         with torch.no_grad():
             output = model(img)[0]
@@ -321,14 +321,14 @@ class ImageStylizer:
         ])
 
         img = Image.open(image_path).convert('RGB')
-        img_tensor = transform(img).unsqueeze(0)  # Add batch dimension
+        img_tensor = transform(img).unsqueeze(0)  
 
         with torch.no_grad():
             model.eval()
             fake_img = model.netG_A(img_tensor)[0]
 
-        fake_img = fake_img * 0.5 + 0.5  # [-1, 1] to [0, 1]
-        fake_img = fake_img.clamp(0, 1)  # Clamp in case of out-of-bound values
+        fake_img = fake_img * 0.5 + 0.5  
+        fake_img = fake_img.clamp(0, 1) 
         fake_img_np = fake_img.permute(1, 2, 0).cpu().numpy() *636
         fake_img_pil = Image.fromarray(np.uint8(fake_img_np))
 
@@ -337,10 +337,9 @@ class ImageStylizer:
 
 stylizer = ImageStylizer()
 
-# Update these routes in your Flask app:
+##
 
 
-# And modify the index() route to change how it passes file paths to the template:
 @app.route('/', methods=['GET', 'POST'])
 def index():
     available_methods = stylizer.get_available_methods()
@@ -359,8 +358,7 @@ def index():
             file.save(filepath)
             
             method = request.form.get('method')
-            
-            # Check if the selected method is available
+        
             if method not in available_methods or available_methods.get(method) is not True:
                 return render_template('index.html', 
                                     error=f"The selected method '{method}' is not available.",
@@ -399,7 +397,7 @@ def index():
                     result = stylizer.apply_cyclegan(filepath, method)
                     result.save(result_path)
                 
-                # Fix the URL paths for the template
+                
                 return render_template('index.html', 
                                     original=f"uploads/{filename}", 
                                     result=f"outputs/{result_filename}",
